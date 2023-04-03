@@ -1,0 +1,294 @@
+CREATE OR REPLACE PROCEDURE first_emp AS
+    emp_name VARCHAR(20);
+BEGIN
+    SELECT first_name || ' ' || last_name INTO emp_name
+    FROM employees WHERE employee_id = 100;
+    DBMS_OUTPUT.PUT_LINE(emp_name);
+    END;
+    
+SET SERVEROUTPUT ON;
+
+EXECUTE first_emp;
+
+CREATE OR REPLACE PROCEDURE print_emp(
+    emp_id IN EMPLOYEES.EMPLOYEE_ID%TYPE
+    
+) AS 
+    emp_name VARCHAR2(20);
+BEGIN
+    SELECT first_name || ' ' || last_name INTO emp_name
+    FROM employees WHERE employee_id = emp_id;
+    DBMS_OUTPUT.PUT_LINE(emp_name);
+END;
+
+EXECUTE print_emp(150);
+
+--매개변수 out일때
+CREATE OR REPLACE PROCEDURE emp_avg_salary(
+    avg_salary OUT NUMBER
+) AS
+BEGIN
+    SELECT AVG(salary) INTO avg_salary
+    FROM employees;
+END;
+
+DECLARE
+     avg_salary NUMBER;
+BEGIN
+    emp_avg_salary(avg_salary);
+    DBMS_OUTPUT.PUT_LINE(avg_salary);
+END;
+--if문
+CREATE OR REPLACE PROCEDURE if_salary(
+    salary IN NUMBER
+) AS
+    avg_salary NUMBER;
+BEGIN 
+    SELECT AVG(salary) INTO avg_salary
+    FROM employees;
+    IF salary >=avg_salary THEN
+        DBMS_OUTPUT.PUT_LINE('??????');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('??? ???');
+    END IF;
+END;
+
+EXECUTE if_salary(5000);
+--case문
+CREATE OR REPLACE PROCEDURE case_hire_date(
+    emp_email IN EMPLOYEES.EMAIL%TYPE
+) AS
+    hire_year NCHAR(2);
+    text_msg VARCHAR(20);
+BEGIN
+    SELECT TO_CHAR(hire_date,'YY') INTO hire_year 
+    FROM employees WHERE email = emp_email;
+    
+    CASE
+        WHEN (hire_year = '01') THEN text_msg := '01년도에 입사';
+        WHEN (hire_year = '02') THEN text_msg := '02년도에 입사';
+        WHEN (hire_year = '03') THEN text_msg := '03년도에 입사';
+        WHEN (hire_year = '04') THEN text_msg := '04년도에 입사';
+        WHEN (hire_year = '05') THEN text_msg := '05년도에 입사';
+        WHEN (hire_year = '06') THEN text_msg := '06년도에 입사';
+        WHEN (hire_year = '07') THEN text_msg := '07년도에 입사';
+        WHEN (hire_year = '08') THEN text_msg := '08년도에 입사';
+        WHEN (hire_year = '09') THEN text_msg := '09년도에 입사';
+    END CASE;
+    DBMS_OUTPUT.PUT_LINE(text_msg);
+END;
+
+EXECUTE case_hire_date('SKING');
+
+
+--for문
+
+CREATE OR REPLACE PROCEDURE while_print AS
+    str VARCHAR(100);
+    i NUMBER;
+BEGIN
+    i:=1;
+    while(i<=10) LOOP
+    str:= '반복횟수 : ' || '(' || i || ')';
+    DBMS_OUTPUT.PUT_LINE(str);
+    i:= i+1;
+    
+    END LOOP;
+END;
+        
+BEGIN
+	while_print;
+END;
+-- IN과 OUT 변수가 둘다있을때 (IF문) 
+CREATE OR REPLACE PROCEDURE out_emp (
+	emp_id IN EMPLOYEES.EMPLOYEE_ID%TYPE,
+	out_str OUT VARCHAR
+) AS
+	emp_name VARCHAR(20);
+BEGIN
+	--들어온 데이터값으로 조회가 안되는 경우의 예외처리가 필요
+	SELECT FIRST_NAME || '' || LAST_NAME INTO emp_name
+	FROM EMPLOYEES WHERE EMPLOYEE_ID  = emp_id;
+
+--	IF emp_id = NULL THEN
+--		out_str:= '직원: 없음';
+--	ELSE
+		out_str:= '직원: ' || emp_name;
+	EXCEPTION
+		WHEN NO_DATA_FOUND THEN 
+		out_str:= '직원 : 없음';
+--	END IF;
+END;
+
+DECLARE
+	out_str VARCHAR2(30);
+BEGIN
+	out_emp(300, out_str);
+	DBMS_OUTPUT.PUT_LINE(out_str);
+END; 
+
+-- 위에 프로시져의 IN OUT 변수를 한꺼번에 만들어보기
+CREATE OR REPLACE PROCEDURE in_out_emp (
+	emp_name IN OUT VARCHAR2
+) AS
+BEGIN
+	--들어온 데이터값으로 조회가 안되는 경우의 예외처리가 필요
+	SELECT FIRST_NAME || '' || LAST_NAME INTO emp_name
+	FROM EMPLOYEES 
+	WHERE FIRST_NAME = emp_name OR LAST_NAME = emp_name;
+	
+--	IF emp_id = NULL THEN
+--		out_str:= '직원: 없음';
+--	ELSE
+		emp_name:= '직원: ' || emp_name;
+	EXCEPTION
+		WHEN NO_DATA_FOUND THEN 
+		emp_name:= '직원 : 없음';
+--	END IF;
+END;
+
+-- 현재 King으로 검색했을시 동명이인 즉 다중데이터가 검색되서 에러가남
+
+DECLARE
+	emp_name VARCHAR2(30) := 'King';
+BEGIN
+	in_out_emp(emp_name);
+	DBMS_OUTPUT.PUT_LINE(emp_name);
+END;
+-- rowtype 응용
+CREATE OR REPLACE PROCEDURE rowtype_emp(
+	emp_id IN EMPLOYEES.EMPLOYEE_ID%TYPE 	
+) AS
+	emp_row EMPLOYEES%ROWTYPE;
+BEGIN
+	SELECT first_name, last_name, job_id
+		INTO emp_row.fisrt_name, emp_row.last_name, emp_row.job_id
+	FROM EMPLOYEES WHERE employee_id = emp_id;
+	DBMS_OUTPUT.PUT_LINE(emp_row.fisrt_name ||'|'|| emp_row.last_name ||'|'||
+	emp_row.job_id);
+	
+END;
+
+BEGIN
+	rowtype_emp(100);
+END;
+
+--레코드타입
+
+CREATE OR REPLACE PROCEDURE record_emp (
+	emp_id IN EMPLOYEES.EMPLOYEE_ID%TYPE
+) AS 
+	TYPE emp_type IS RECORD (first_name VARCHAR2(10),
+							 last_name VARCHAR2(10),
+							 job_id VARCHAR(10));
+	emp_record emp_type;
+BEGIN
+	SELECT first_name, last_name, job_id
+		INTO emp_record.first_name, emp_record.last_name, emp_record.job_id
+		FROM EMPLOYEES WHERE employee_id = emp_id;
+	DBMS_OUTPUT.PUT_LINE(emp_record.first_name||'|'|| emp_record.last_name||'|'||emp_record.job_id)
+END;
+
+BEGIN
+	record_emp(100);
+END;
+
+--collection 타입
+CREATE OR REPLACE PROCEDURE collection_ex AS 
+	TYPE v_array_type IS VARRAY(5) OF NUMBER(10);
+	TYPE nest_tbl_type IS TABLE OF VARCHAR2(10);
+	TYPE a_array_type IS TABLE OF NUMBER(10) INDEX BY VARCHAR2(10);
+	v_array v_array_type;
+	nest_tbl nest_tble_type;
+	a_array a_array_type;
+	idx VARCHAR2(10);
+BEGIN
+	v_array := v_array_type(1,2,3,4,5);
+	nest_tbl := nest_tbl_type('A','B','C','D','E');
+	a_array('A') := 1;
+	a_array('B') := 2;
+	a_array('C') := 3;
+	a_array('D') := 4;
+	a_array('E') := 5;
+	
+	FOR i IN 1..5 LOOP
+	DBMS_OUTPUT.PUT_LINE(v_array(i)||' | '|| nest_tbl(i));
+	END LOOP;
+
+	idx := a_array.FIRST;
+	WHILE idx IS NOT NULL LOOP
+		DBMS_OUTPUT.PUT_LINE(idx || ' : ' || a_array(idx));
+		idx : = a_array.NEXT(idx);
+	END LOOP;
+	
+END;
+
+BEGIN
+	collection_ex;
+END;
+-- collection 타입 연습
+CREATE OR REPLACE PROCEDURE collection_ex2 AS 
+	--type 지정  v_array_type, nest_tbl_type, a_array_type 사용
+	TYPE v_array_type IS VARRAY(5) OF NUMBER(10);
+	TYPE nest_tbl_type IS TABLE OF VARCHAR2(20);
+	TYPE a_array_type IS TABLE OF NUMBER(10) INDEX BY VARCHAR2(20);
+	--변수화
+	v_array v_array_type;
+	nest_tbl nest_tbl_type;
+	a_array a_array_type;
+	-- a_array에 사용할 index 변수 선언
+	idx VARCHAR2(10);
+BEGIN
+	v_array := v_array_type(1,2,3,4,5);
+	nest_tbl := nest_tbl_type('김밥','오징어','오므라이스','짜장면','짬뽕');
+	a_array('하나') := 1;
+	a_array('둘') := 2;
+	a_array('셋') := 3;
+	a_array('넷') := 4;
+	a_array('다섯') := 5;
+	
+	FOR i IN 1..5 LOOP
+		DBMS_OUTPUT.PUT_LINE(v_array(i)|| ' | ' || nest_tbl(i));
+	END LOOP;
+	
+	idx :=a_array.FIRST;
+	WHILE idx IS NOT NULL LOOP
+		DBMS_OUTPUT.PUT_LINE(idx || ' | ' || a_array(idx));
+		idx := a_array.NEXT(idx);
+	END LOOP;
+	
+END;
+
+BEGIN
+	collection_ex2;
+END;
+-- cursor 커서
+CREATE OR REPLACE PROCEDURE cursor_salary AS 
+	sal NUMBER := 0;
+	cnt NUMBER := 0;
+	total NUMBER := 0;
+	CURSOR emp_cursor IS SELECT salary FROM EMPLOYEES;
+BEGIN
+	OPEN emp_cursor;
+	LOOP
+		FETCH emp_cursor INTO sal;
+		EXIT WHEN emp_cursor%NOTFOUND;
+		total := total+sal;
+		cnt := cnt + 1;
+	END LOOP;
+	CLOSE emp_cursor;
+	DBMS_OUTPUT.PUT_LINE('평균 SALARY: ' || (total/cnt));
+	
+END;
+
+BEGIN
+	cursor_salary;
+END;
+
+
+
+
+	
+
+
+	
