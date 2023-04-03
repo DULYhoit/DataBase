@@ -285,10 +285,135 @@ BEGIN
 	cursor_salary;
 END;
 
+--함수(Function)
+CREATE OR REPLACE FUNCTION to_yyyymmdd(date Date)
+	-- 반환값은 VARCHAR2 타입으로
+	RETURN VARCHAR2
+AS
+	char_date VARCHAR2(20);
+BEGIN
+	char_date := TO_CHAR(date,'YYYYMMDD');
+	RETURN char_date;
+END;
+-- 함수안에 함수사용
+SELECT SYSDATE,to_yyyymmdd(SYSDATE) FROM dual;
 
+CREATE OR REPLACE FUNCTION get_age(date Date)
+	RETURN NUMBER
+AS
+	age NUMBER;
+BEGIN
+	age := TRUNC(MONTHS_BETWEEN(TRUNC(SYSDATE),to_yyyymmdd(date)) / 12);
+	RETURN age;
+END;
 
+SELECT get_age('20010101') FROM dual;
 
+--특정한 테이블형태로 반환하는 함수
+--1.오브젝트 형태의 ename_type을 만들어줌
+CREATE OR REPLACE TYPE ename_type AS OBJECT 
+(
+	first_name VARCHAR(20),
+	last_name VARCHAR(20)
+);
+--2. 테이블형태의 타입을 만들어줌
+CREATE OR REPLACE TYPE ename_table AS TABLE OF ename_type;
+
+--3. 함수 만들기 return으로 만들어둔 테이블 타입 ename_table 반환
+CREATE OR REPLACE FUNCTION emp_table(emp_id NUMBER)
+	RETURN ename_table
+	PIPELINED
+AS 
+	ename ename_type;
+BEGIN
+	FOR emp IN (SELECT first_name, last_name FROM EMPLOYEES
+				WHERE EMPLOYEE_ID = emp_id)
+	LOOP 
+		ename := ename_type(emp.first_name, emp.last_name)
+		--테이블의 로우값으로 넣음
+		PIPE ROW(ename)
+		
+	END LOOP;
 	
+	RETURN;
+	
+END;
 
+SELECT * FROM TABLE(emp_table(100));
+
+--예제 IF ELSEIF ELSE 문을 사용하여 JOBS 테이블의 최저,최대 salary
+--평균값을 이용하여 입력으로 받은 salary가 최저 평균 이하인지 최대 평균 이상인지, 평균 구간인지
+--출력하는 프로시저정의
+-- 입력받은 salary <= 최저 평균이하 , salary >= 최대 평균이상 else 평균구간	
+
+CREATE OR REPLACE PROCEDURE if_minmax_salary(
+	salary IN NUMBER
+) AS 
+	avg_min_salary NUMBER;
+	avg_max_salary NUMBER;
+BEGIN
+	SELECT AVG(MIN_SALARY), AVG(MAX_SALARY)
+	INTO avg_min_salary, avg_max_salary
+	FROM JOBS;
+
+	IF salary <= avg_min_salary THEN
+		DBMS_OUTPUT.PUTLINE('최저 평균 이하');
+	ELSE IF salary >= avg_max_salary THEN
+		DBMS_OUTPUT.PUTLINE('최대 평균 이상');
+	ELSE DBMS_OUTPUT.PUTLINE('평균 구간');
+END;
+
+BEGIN
+	if_minmax_salary(10000);
+END;
+
+--프로시저를 이용한 구구단
+CREATE OR REPLACE PROCEDURE gugudan AS 
+	str VARCHAR2(100);
+	i NUMBER;
+	j NUMBER;
+BEGIN
+	i := 1;
+	WHILE (i<10) LOOP
+		str := '';
+		j := 1;
+		WHILE (j<10) LOOP
+			str := i || '*' || j || '=' || i*j;
+			j := j+1;
+			
+		END LOOP;
+		DBMS_OUTPUT.PUT_LINE(str);
+		i := i + 1;
+	END LOOP;
+	
+END;
+
+BEGIN
+	gugudan;
+END;
+
+--cursor 예제
+CREATE OR REPLACE PROCEDURE cursor_it_prog AS 
+	fname VARCHAR(20);
+	lname VARCHAR(20);
+	jobid VARCHAR(20);
+	CURSOR emp_cursor IS
+		SELECT first_name, last_name, job_id FROM EMPLOYEES;
+BEGIN
+	DBMS_OUTPUT.PUT_LINE('[IT Programmer]');
+	OPEN emp_cursor;
+	LOOP
+		FETCH emp_cursor INTO fname, lname, jobid;
+		EXIT emp_cursor%NOTFOUND;
+		IF jobid = 'IT_PROG' THEN
+			DBMS_OUTPUT.PUT_LINE(fname || ' ' || lname);
+		END IF;
+	END LOOP;
+	CLOSE emp_cursor;
+END;
+
+BEGIN
+	cursor_it_prog;
+END;
 
 	
